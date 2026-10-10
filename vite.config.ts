@@ -25,8 +25,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: '微联老师 · 莱特纳英语学习 (Weilian Laoshi Leitner English)',
-        short_name: '微联英语',
+        name: '威廉老师 · 莱特纳英语学习 (Weilian Laoshi Leitner English)',
+        short_name: '威廉英语',
         description: '专为母语为中文者打造的极简主义莱特纳间隔重复记忆英语卡片系统。',
         theme_color: '#09090b',
         background_color: '#09090b',

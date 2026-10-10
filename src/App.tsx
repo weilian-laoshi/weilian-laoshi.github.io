@@ -103,7 +103,7 @@ export function App() {
     if (allProf.length === 0) {
       // First time onboarding: seed default profile for Chinese speakers learning English
       const initial = await createProfile(
-        '微联学员',
+        '威廉学员',
         '🌱',
         ['english'],
         ['daily-travel', 'manners-etiquette', 'business-work', 'idioms-expressions', 'culture-history', 'science-nature'],

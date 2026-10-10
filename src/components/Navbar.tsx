@@ -48,14 +48,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center gap-2 cursor-pointer group text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 rounded-lg p-0.5 transition-opacity hover:opacity-85 shrink-0"
           >
             <div className="w-8 h-8 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 flex items-center justify-center font-bold text-xs shadow-xs group-hover:scale-105 transition-transform shrink-0">
-              <span className="text-sm font-semibold select-none">联</span>
+              <span className="text-xs font-bold tracking-tight select-none">威廉</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-50 leading-none group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors">
-                微联老师 · Weilian Laoshi
+              <span className="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-50 leading-none group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors">
+                威廉老师
               </span>
               <span className="hidden sm:inline text-[10px] text-zinc-400 font-mono tracking-wider uppercase mt-0.5">
-                Leitner English Flashcards
+                Weilian Laoshi · Leitner English
               </span>
             </div>
           </button>
