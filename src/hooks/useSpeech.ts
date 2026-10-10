@@ -1,14 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-// Language code normalizer
 export function normalizeLanguageCode(lang?: string): string {
   if (!lang) return 'en-US';
   const l = lang.toLowerCase();
+  if (l === 'en-gb' || l === 'british') return 'en-GB';
   if (l === 'chinese' || l.startsWith('zh')) return 'zh-CN';
-  if (l === 'spanish' || l.startsWith('es')) return 'es-ES';
-  if (l === 'german' || l.startsWith('de')) return 'de-DE';
-  if (l === 'english' || l.startsWith('en')) return 'en-US';
-  return lang;
+  return 'en-US';
 }
 
 export function useSpeech() {

@@ -1,4 +1,4 @@
-export type LanguageId = 'spanish' | 'english' | 'german' | 'chinese';
+export type LanguageId = 'english';
 
 export type DifficultyLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2' | 'beginner' | 'intermediate' | 'advanced' | 'fluent';
 
@@ -7,13 +7,14 @@ export interface LanguageOption {
   name: string;
   nativeName: string;
   flag: string;
-  code: string; // Speech synthesis language code (e.g. 'es-ES', 'zh-CN')
+  code: string; // Speech synthesis language code (e.g. 'en-US', 'en-GB')
   description: string;
 }
 
 export interface TopicOption {
   id: string;
   name: string;
+  chineseName: string;
   description: string;
   icon: string;
 }
@@ -23,6 +24,7 @@ export interface DifficultyOption {
   name: string;
   cefr: string;
   badge: string;
+  chineseTitle: string;
   description: string;
 }
 
@@ -30,13 +32,13 @@ export interface Profile {
   id: string;
   name: string;
   avatar: string;
-  selectedLanguages: LanguageId[];
   selectedTopics: string[];
   selectedDifficulty: DifficultyLevel;
+  accent?: 'en-US' | 'en-GB';
+  selectedLanguages?: LanguageId[];
   languageDifficulties?: Partial<Record<LanguageId, DifficultyLevel>>;
   createdAt: number;
 }
-
 
 export interface Deck {
   id: string;
@@ -58,15 +60,15 @@ export interface Flashcard {
   profileId: string;
   languageId: LanguageId;
   difficulty: DifficultyLevel;
-  front: string; // Target language word / phrase / expression
-  back: string; // Translation & meaning
-  phonetic?: string; // Pinyin for Chinese, IPA / pronunciation for others
-  exampleTarget?: string; // Example sentence in target language
-  exampleTranslation?: string; // Example sentence translated
-  grammarNotes?: string; // Part of speech, gender article, cultural nuance
-  hint?: string;
-  isFavorite?: boolean; // User starred favorite for quick review
-  box: 1 | 2 | 3 | 4 | 5;
+  front: string; // Target English word / phrase / expression
+  back: string; // Chinese translation & meaning (中文释义)
+  phonetic?: string; // English IPA pronunciation (/aɪ piː eɪ/)
+  exampleTarget?: string; // Example sentence in English
+  exampleTranslation?: string; // Chinese translation of example sentence
+  grammarNotes?: string; // Grammar notes, collocations, Chinglish traps & cultural context
+  hint?: string; // Memory clue / mnemonic in Chinese
+  isFavorite?: boolean; // Starred favorite for quick review
+  box: 1 | 2 | 3 | 4 | 5; // Leitner box (1 to 5)
   nextReviewDate: number; // Unix timestamp in ms
   lastReviewedDate?: number;
   totalReviews: number;
@@ -79,6 +81,7 @@ export interface LeitnerBoxSummary {
   box: 1 | 2 | 3 | 4 | 5;
   intervalDays: number;
   label: string;
+  chineseLabel: string;
   cardCount: number;
   dueCount: number;
 }

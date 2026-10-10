@@ -93,7 +93,6 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
       await addCard(
         deck.id,
         deck.profileId,
-        deck.languageId,
         deck.difficulty,
         front,
         back,
@@ -143,14 +142,14 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              {deck.title}
+              {deck.title.replace(/^英语\s*\(English\):\s*/i, '').trim()}
             </h1>
             <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-semibold">
               {deck.difficulty}
             </span>
           </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            {deck.description}
+            {deck.description.replace(/^英语\s*\(English\):\s*/i, '').trim()}
           </p>
         </div>
 
@@ -198,7 +197,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
               {editingCardId ? 'Edit Language Phrase' : 'Add New Language Phrase'}
             </h3>
             <span className="text-xs text-zinc-400 uppercase font-mono">
-              {deck.languageId} &bull; {deck.difficulty}
+              英语 &bull; {deck.difficulty}
             </span>
           </div>
 

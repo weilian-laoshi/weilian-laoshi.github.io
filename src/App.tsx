@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import type { Profile, Deck, Flashcard, LeitnerBoxSummary, LanguageId, DifficultyLevel } from './types';
+import type { Profile, Deck, Flashcard, LeitnerBoxSummary, DifficultyLevel } from './types';
 import {
   getAllProfiles,
   createProfile,
@@ -12,9 +12,10 @@ import {
   createCustomDeck,
   deleteDeck,
   toggleCardFavorite,
+  sanitizeEnglishDatabase,
   db,
 } from './db/database';
-import { SUPPORTED_LANGUAGES, DIFFICULTY_LEVELS, normalizeDifficulty } from './data/languages';
+import { DIFFICULTY_LEVELS, LANGUAGE_TOPICS, normalizeDifficulty } from './data/languages';
 import { Navbar } from './components/Navbar';
 import { LeitnerVisualizer } from './components/LeitnerVisualizer';
 import { DeckManager } from './components/DeckManager';
@@ -30,14 +31,34 @@ import {
   Trash2,
   SlidersHorizontal,
   Star,
+  Compass,
+  Plane,
+  Utensils,
+  ShoppingBag,
+  HeartHandshake,
+  Briefcase,
+  Sparkles,
+  Landmark,
+  Atom,
 } from 'lucide-react';
+
+const TOPIC_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  Compass,
+  Plane,
+  Utensils,
+  ShoppingBag,
+  HeartHandshake,
+  Briefcase,
+  Sparkles,
+  Landmark,
+  Atom,
+};
 
 export function App() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [activeProfile, setActiveProfile] = useState<Profile | null>(null);
   const [decks, setDecks] = useState<Deck[]>([]);
   const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
-  const [selectedLanguageFilter, setSelectedLanguageFilter] = useState<LanguageId | 'all'>('all');
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [allCards, setAllCards] = useState<Flashcard[]>([]);
   const [boxSummaries, setBoxSummaries] = useState<LeitnerBoxSummary[]>([]);
@@ -54,7 +75,6 @@ export function App() {
   // Custom deck form state
   const [customTitle, setCustomTitle] = useState('');
   const [customDesc, setCustomDesc] = useState('');
-  const [customLangId, setCustomLangId] = useState<LanguageId>('english');
   const [customDifficulty, setCustomDifficulty] = useState<DifficultyLevel>('A1');
 
   // Theme
@@ -97,17 +117,19 @@ export function App() {
     });
   }, [applyThemeToDom]);
 
-  // Load or Initialize Profile
+  // Load or Initialize Profile (English Only)
   const loadInitialData = useCallback(async () => {
+    await sanitizeEnglishDatabase();
     let allProf = await getAllProfiles();
     if (allProf.length === 0) {
-      // First time onboarding: seed default profile for Chinese speakers learning English
+      // First time onboarding: seed default profile for Chinese students learning English
       const initial = await createProfile(
-        '威廉学员',
+        '英语学员',
         '🌱',
         ['english'],
-        ['daily-travel', 'manners-etiquette', 'business-work', 'idioms-expressions', 'culture-history', 'science-nature'],
-        'A1'
+        LANGUAGE_TOPICS.map(t => t.id),
+        'A1',
+        'en-US'
       );
       allProf = [initial];
     }
@@ -115,12 +137,12 @@ export function App() {
     setProfiles(allProf);
     const current = allProf[0];
     if (current) {
-      await seedCurriculumForProfile(
-        current.id,
-        current.selectedLanguages && current.selectedLanguages.length > 0 ? current.selectedLanguages : ['english'],
-        current.selectedTopics && current.selectedTopics.length > 0 ? current.selectedTopics : ['daily-travel', 'manners-etiquette', 'business-work', 'idioms-expressions'],
-        current.languageDifficulties || current.selectedDifficulty || 'A1'
-      );
+      const currentTopics = current.selectedTopics && current.selectedTopics.length > 0
+        ? current.selectedTopics
+        : LANGUAGE_TOPICS.map(t => t.id);
+      const currentDiff = normalizeDifficulty(current.selectedDifficulty || 'A1');
+
+      await seedCurriculumForProfile(current.id, currentTopics, currentDiff);
     }
     setActiveProfile(current);
   }, []);
@@ -146,14 +168,9 @@ export function App() {
       activeCards = totalProfileCards;
     }
 
-    // Apply language filter to cards when viewing all decks
-    if (!selectedDeckId && selectedLanguageFilter !== 'all') {
-      activeCards = activeCards.filter(c => c.languageId === selectedLanguageFilter);
-    }
-
     setCards(activeCards);
     setBoxSummaries(computeBoxSummaries(activeCards));
-  }, [activeProfile, selectedDeckId, selectedLanguageFilter]);
+  }, [activeProfile, selectedDeckId]);
 
   useEffect(() => {
     refreshProfileData();
@@ -165,12 +182,11 @@ export function App() {
     setIsFavoritesPage(false);
   };
 
-  // Return to the main page (reset deck selection, study mode, filters, and modals)
+  // Return to the main page
   const handleGoHome = () => {
     setIsStudyMode(false);
     setIsFavoritesPage(false);
     setSelectedDeckId(null);
-    setSelectedLanguageFilter('all');
     setActiveBoxFilter(null);
     setIsProfileModalOpen(false);
     setIsCurriculumModalOpen(false);
@@ -182,18 +198,16 @@ export function App() {
     if (!activeProfile) return;
 
     const SESSION_SIZE = 10;
-    const langFilter = selectedLanguageFilter !== 'all' ? selectedLanguageFilter : undefined;
     const dueCards = await getDueCards(
       activeProfile.id,
-      deckId || selectedDeckId || undefined,
-      !deckId && !selectedDeckId ? langFilter : undefined
+      deckId || selectedDeckId || undefined
     );
 
     let queue: Flashcard[] = [];
     if (dueCards.length > 0) {
       queue = dueCards.slice(0, SESSION_SIZE);
     } else {
-      // If no cards are due today, allow practice of cards in current scope
+      // If no cards are due today, practice cards in current scope
       const targetCards = deckId
         ? await getCardsForDeck(deckId)
         : selectedDeckId
@@ -218,37 +232,30 @@ export function App() {
 
     const favoriteCards = targetCards.filter(c => c.isFavorite);
     if (favoriteCards.length === 0) {
-      alert('No favorite sentences yet! Click the star icon (★) on any card during study or in the deck manager to mark it as a favorite.');
+      alert('您尚未标记任何重点星标句子！在学习或词库中点击星标（★）即可收藏。');
       return;
     }
 
-    // Queue favorite cards (up to SESSION_SIZE)
     setStudyQueue(favoriteCards.slice(0, SESSION_SIZE));
     setIsStudyMode(true);
   };
 
-  // Save Curriculum (Languages + Topics + Difficulty)
+  // Save Curriculum (English Topics + Difficulty)
   const handleSaveCurriculum = async (
-    languages: LanguageId[],
+    _languages: any,
     topics: string[],
-    difficulties: Partial<Record<LanguageId, DifficultyLevel>>
+    difficulties: Partial<Record<any, DifficultyLevel>>
   ) => {
     if (!activeProfile) return;
 
-    await seedCurriculumForProfile(activeProfile.id, languages, topics, difficulties);
+    const targetDifficulty = normalizeDifficulty(difficulties['english'] || activeProfile.selectedDifficulty || 'A1');
 
-    const mergedDifficulties = {
-      ...(activeProfile.languageDifficulties || {}),
-      ...difficulties,
-    };
-    const primaryDifficulty = (languages.length > 0 && difficulties[languages[0]])
-      ? normalizeDifficulty(difficulties[languages[0]]!)
-      : normalizeDifficulty(activeProfile.selectedDifficulty || 'A1');
+    await seedCurriculumForProfile(activeProfile.id, topics, targetDifficulty);
 
-    activeProfile.selectedLanguages = languages;
+    activeProfile.selectedLanguages = ['english'];
     activeProfile.selectedTopics = topics;
-    activeProfile.languageDifficulties = mergedDifficulties;
-    activeProfile.selectedDifficulty = primaryDifficulty;
+    activeProfile.selectedDifficulty = targetDifficulty;
+    activeProfile.languageDifficulties = { english: targetDifficulty };
 
     await db.profiles.put(activeProfile);
     setActiveProfile({ ...activeProfile });
@@ -256,14 +263,13 @@ export function App() {
     await refreshProfileData();
   };
 
-  // Create Custom Deck
+  // Create Custom English Deck
   const handleCreateCustomDeck = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeProfile || !customTitle.trim()) return;
 
     const newDeck = await createCustomDeck(
       activeProfile.id,
-      customLangId,
       customTitle.trim(),
       customDesc.trim(),
       customDifficulty
@@ -277,7 +283,7 @@ export function App() {
   };
 
   const handleDeleteDeck = async (deckId: string) => {
-    if (confirm('Delete this entire language deck and all its flashcards?')) {
+    if (confirm('确认删除此词库及其所有记忆卡片？')) {
       await deleteDeck(deckId);
       if (selectedDeckId === deckId) {
         setSelectedDeckId(null);
@@ -289,44 +295,42 @@ export function App() {
   if (!activeProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 text-zinc-400 text-xs font-mono">
-        Loading language learning system...
+        正在初始化莱特纳英语学习系统...
       </div>
     );
   }
 
   const selectedDeck = decks.find(d => d.id === selectedDeckId);
-  const displayedDecks = selectedLanguageFilter === 'all'
-    ? decks
-    : decks.filter(d => d.languageId === selectedLanguageFilter);
-
   const totalDueCards = cards.filter(c => c.nextReviewDate <= Date.now()).length;
-  // Compute total favorites from all cards across the profile so the count in visualizer is always global
   const totalFavoriteCards = allCards.filter(c => c.isFavorite).length;
+  const currentDiffDef = DIFFICULTY_LEVELS.find(d => d.id === activeProfile.selectedDifficulty) || DIFFICULTY_LEVELS[0];
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col font-sans transition-colors duration-150">
       <Navbar
         activeProfile={activeProfile}
         decks={decks}
-        selectedLanguageFilter={selectedLanguageFilter}
-        onSelectLanguageFilter={setSelectedLanguageFilter}
+        totalDueToday={totalDueCards}
+        totalFavorites={totalFavoriteCards}
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
         onOpenCurriculumModal={() => setIsCurriculumModalOpen(true)}
+        onOpenFavorites={() => {
+          setSelectedDeckId(null);
+          setIsFavoritesPage(true);
+        }}
         theme={theme}
         onToggleTheme={toggleTheme}
-        totalDueToday={totalDueCards}
         onGoHome={handleGoHome}
         isStudyMode={isStudyMode}
       />
 
-      <main className="flex-1 max-w-5xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-3.5 sm:px-6 py-4 sm:py-8">
         {isStudyMode ? (
           <StudySession
             deck={selectedDeck}
             cards={studyQueue}
             onToggleFavorite={async (cardId) => {
               const res = await toggleCardFavorite(cardId);
-              // Update in-place in studyQueue so active session immediately keeps correct favorite state
               setStudyQueue(prev =>
                 prev.map(c => (c.id === cardId ? { ...c, isFavorite: res } : c))
               );
@@ -372,9 +376,9 @@ export function App() {
                 <div className="mb-4">
                   <button
                     onClick={() => setSelectedDeckId(null)}
-                    className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center gap-1 cursor-pointer"
+                    className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center gap-1 cursor-pointer font-medium"
                   >
-                    <span>&larr; View All Language Decks</span>
+                    <span>&larr; 返回所有英语词库 (View All English Decks)</span>
                   </button>
                 </div>
 
@@ -395,22 +399,14 @@ export function App() {
                   <div>
                     <div className="flex items-center gap-2">
                       <h2 className="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-                        Language Decks
+                        英语主题词库 (English Decks)
                       </h2>
-                      {selectedLanguageFilter !== 'all' ? (
-                        <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 capitalize">
-                          {activeProfile.languageDifficulties?.[selectedLanguageFilter] || activeProfile.selectedDifficulty || 'Beginner'} Tier
-                        </span>
-                      ) : (
-                        <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
-                          {Array.from(new Set(activeProfile.selectedLanguages.map(l => activeProfile.languageDifficulties?.[l] || activeProfile.selectedDifficulty || 'beginner'))).length === 1
-                            ? `${activeProfile.languageDifficulties?.[activeProfile.selectedLanguages[0]] || activeProfile.selectedDifficulty || 'Beginner'} Tier`
-                            : 'Multi-Level Tiers'}
-                        </span>
-                      )}
+                      <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300">
+                        {currentDiffDef.chineseTitle}
+                      </span>
                     </div>
                     <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                      Review phrases on schedule to cement native fluency and intuitive recall.
+                      结合莱特纳 5 盒间隔重复记忆法，掌握纯正英美地道表达与语法考点。
                     </p>
                   </div>
 
@@ -418,10 +414,10 @@ export function App() {
                     {cards.length > 0 && (
                       <button
                         onClick={() => handleStartStudy()}
-                        className="w-full sm:w-auto order-first sm:order-last px-4 py-2.5 sm:py-2 rounded-xl text-xs font-semibold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                        className="w-full sm:w-auto order-first sm:order-last px-4 py-2 rounded-xl text-xs font-semibold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                       >
                         <Play className="w-3.5 h-3.5 fill-current" />
-                        <span>Study ({totalDueCards} Due)</span>
+                        <span>开始今日复习 ({totalDueCards} 待复习)</span>
                       </button>
                     )}
 
@@ -429,10 +425,10 @@ export function App() {
                       <button
                         onClick={() => handleStudyFavorites()}
                         className="flex-1 sm:flex-initial px-3 sm:px-3.5 py-2 rounded-xl text-xs font-semibold bg-amber-400 hover:bg-amber-300 text-amber-950 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
-                        title="Review all starred favorite sentences"
+                        title="复习所有星标重点句子"
                       >
                         <Star className="w-3.5 h-3.5 fill-amber-950 text-amber-950" />
-                        <span>Favorites ({totalFavoriteCards})</span>
+                        <span>重点星标 ({totalFavoriteCards})</span>
                       </button>
                     )}
 
@@ -441,7 +437,7 @@ export function App() {
                       className="flex-1 sm:flex-initial px-3 sm:px-3.5 py-2 rounded-xl text-xs font-medium border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                     >
                       <SlidersHorizontal className="w-3.5 h-3.5" />
-                      <span>Curriculum</span>
+                      <span>等级与主题</span>
                     </button>
 
                     <button
@@ -449,49 +445,41 @@ export function App() {
                       className="flex-1 sm:flex-initial px-3 sm:px-3.5 py-2 rounded-xl text-xs font-medium border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      <span>Custom Deck</span>
+                      <span>新建词库</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Deck Cards Grid */}
-                {displayedDecks.length === 0 ? (
+                {decks.length === 0 ? (
                   <div className="py-16 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900">
                     <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 mx-auto mb-3">
                       <Layers className="w-6 h-6" />
                     </div>
                     <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
-                      No decks match the current filter
+                      当前暂无词库
                     </h3>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto mb-5">
-                      Configure your languages and subjects to seed decks, or clear the language filter.
+                      打开课程设置，勾选学习主题与目标等级以生成词库。
                     </p>
                     <button
-                      onClick={() => {
-                        setSelectedLanguageFilter('all');
-                        setIsCurriculumModalOpen(true);
-                      }}
+                      onClick={() => setIsCurriculumModalOpen(true)}
                       className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 cursor-pointer shadow-xs"
                     >
-                      Open Curriculum Builder
+                      打开课程配置
                     </button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {displayedDecks.map(deck => {
-                      const langDef = SUPPORTED_LANGUAGES.find(l => l.id === deck.languageId);
-
-                      return (
-                        <LanguageDeckCard
-                          key={deck.id}
-                          deck={deck}
-                          flag={langDef?.flag || '🌐'}
-                          onOpen={() => handleSelectDeck(deck.id)}
-                          onStudy={() => handleStartStudy(deck.id)}
-                          onDelete={() => handleDeleteDeck(deck.id)}
-                        />
-                      );
-                    })}
+                    {decks.map(deck => (
+                      <EnglishDeckCard
+                        key={deck.id}
+                        deck={deck}
+                        onOpen={() => handleSelectDeck(deck.id)}
+                        onStudy={() => handleStartStudy(deck.id)}
+                        onDelete={() => handleDeleteDeck(deck.id)}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
@@ -504,10 +492,9 @@ export function App() {
       <LanguageCurriculumModal
         isOpen={isCurriculumModalOpen}
         onClose={() => setIsCurriculumModalOpen(false)}
-        initialLanguages={activeProfile.selectedLanguages || ['spanish']}
-        initialTopics={activeProfile.selectedTopics || ['daily-travel']}
-        initialDifficulty={activeProfile.selectedDifficulty || 'beginner'}
-        initialLanguageDifficulties={activeProfile.languageDifficulties || {}}
+        initialTopics={activeProfile.selectedTopics || LANGUAGE_TOPICS.map(t => t.id)}
+        initialDifficulty={activeProfile.selectedDifficulty || 'A1'}
+        initialLanguageDifficulties={activeProfile.languageDifficulties || { english: 'A1' }}
         onSaveCurriculum={handleSaveCurriculum}
       />
 
@@ -530,56 +517,37 @@ export function App() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs animate-in fade-in">
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl">
             <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 mb-1">
-              Create Custom Language Deck
+              创建自定义英语词库
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">
-              Add your own specialized vocabulary deck with Leitner repetition.
+              自主收录日常工作或阅读中遇到的生词生句，享受莱特纳智能复习。
             </p>
 
             <form onSubmit={handleCreateCustomDeck} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    Language
-                  </label>
-                  <select
-                    value={customLangId}
-                    onChange={e => setCustomLangId(e.target.value as LanguageId)}
-                    className="w-full text-xs p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100"
-                  >
-                    {SUPPORTED_LANGUAGES.map(l => (
-                      <option key={l.id} value={l.id}>
-                        {l.flag} {l.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    Difficulty
-                  </label>
-                  <select
-                    value={customDifficulty}
-                    onChange={e => setCustomDifficulty(e.target.value as DifficultyLevel)}
-                    className="w-full text-xs p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100"
-                  >
-                    {DIFFICULTY_LEVELS.map(d => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} ({d.cefr})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  目标难度级别
+                </label>
+                <select
+                  value={customDifficulty}
+                  onChange={e => setCustomDifficulty(e.target.value as DifficultyLevel)}
+                  className="w-full text-xs p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100"
+                >
+                  {DIFFICULTY_LEVELS.map(d => (
+                    <option key={d.id} value={d.id}>
+                      {d.chineseTitle} ({d.cefr})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                  Deck Title
+                  词库名称
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Spanish Subjunctive Triggers"
+                  placeholder="例如: 雅思口语高频搭配、海外租房生活英语"
                   value={customTitle}
                   onChange={e => setCustomTitle(e.target.value)}
                   required
@@ -589,11 +557,11 @@ export function App() {
 
               <div>
                 <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                  Description
+                  词库简介 / 重点说明
                 </label>
                 <input
                   type="text"
-                  placeholder="Brief note or grammatical focus"
+                  placeholder="简要备注此词库的学习目标与语境"
                   value={customDesc}
                   onChange={e => setCustomDesc(e.target.value)}
                   className="w-full text-xs p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-900"
@@ -604,15 +572,15 @@ export function App() {
                 <button
                   type="button"
                   onClick={() => setIsCustomDeckModalOpen(false)}
-                  className="px-3 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                  className="px-3 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 cursor-pointer"
                 >
-                  Cancel
+                  取消
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-lg text-xs font-medium bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                  className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 cursor-pointer shadow-xs"
                 >
-                  Create Deck
+                  创建词库
                 </button>
               </div>
             </form>
@@ -623,16 +591,19 @@ export function App() {
   );
 }
 
-// Sub-component for individual Language Deck card
-function LanguageDeckCard({
+// Sub-component for individual English Deck Card
+function getTopicIcon(topicId?: string): React.ComponentType<{ className?: string }> {
+  const topicDef = LANGUAGE_TOPICS.find(t => t.id === topicId);
+  return (topicDef && TOPIC_ICONS[topicDef.icon]) || Layers;
+}
+
+function EnglishDeckCard({
   deck,
-  flag,
   onOpen,
   onStudy,
   onDelete,
 }: {
   deck: Deck;
-  flag: string;
   onOpen: () => void;
   onStudy: () => void;
   onDelete: () => void;
@@ -644,18 +615,23 @@ function LanguageDeckCard({
   }, [deck.id]);
 
   const dueCount = deckCards.filter(c => c.nextReviewDate <= Date.now()).length;
+  const TopicIcon = getTopicIcon(deck.topicId);
+  const cleanTitle = deck.title.replace(/^英语\s*\(English\):\s*/i, '').trim();
+  const cleanDesc = deck.description.replace(/^英语\s*\(English\):\s*/i, '').trim();
 
   return (
     <div
       onClick={onOpen}
-      className="p-4 sm:p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all flex flex-col justify-between cursor-pointer group shadow-2xs hover:shadow-xs active:scale-[0.99] relative"
+      className="p-4 sm:p-5 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all flex flex-col justify-between cursor-pointer group shadow-2xs hover:shadow-xs active:scale-[0.99] relative"
     >
       <div>
         <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex items-center gap-2.5">
-            <span className="text-2xl select-none">{flag}</span>
-            <h3 className="font-semibold text-sm sm:text-base text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-              {deck.title}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center justify-center shrink-0 border border-zinc-200/70 dark:border-zinc-700/60 group-hover:border-indigo-300 dark:group-hover:border-indigo-700 transition-colors">
+              <TopicIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <h3 className="font-semibold text-sm sm:text-base text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
+              {cleanTitle}
             </h3>
           </div>
 
@@ -665,7 +641,7 @@ function LanguageDeckCard({
                 e.stopPropagation();
                 onDelete();
               }}
-              title="Delete deck"
+              title="删除此自定义词库"
               className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500 transition-opacity p-1 cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -674,18 +650,18 @@ function LanguageDeckCard({
         </div>
 
         <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 leading-relaxed mb-4">
-          {deck.description}
+          {cleanDesc}
         </p>
       </div>
 
       <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-xs font-mono text-zinc-600 dark:text-zinc-400">
-            {deckCards.length} phrases
+            {deckCards.length} 句短语
           </span>
           {dueCount > 0 && (
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
-              {dueCount} due
+              {dueCount} 待复习
             </span>
           )}
         </div>
@@ -697,7 +673,7 @@ function LanguageDeckCard({
           }}
           className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 active:scale-95 transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
         >
-          <span>Study</span>
+          <span>复习</span>
           <ArrowRight className="w-3 h-3" />
         </button>
       </div>

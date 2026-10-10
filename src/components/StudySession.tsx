@@ -90,27 +90,11 @@ export const StudySession: React.FC<StudySessionProps> = ({
 
   const { speak, isSpeaking, isSupported: speechSupported } = useSpeech();
 
-  // Dynamically resolve exact language code from current card or deck
-  const getCardLanguageCode = useCallback((card?: Flashcard, currentDeck?: Deck): string => {
-    if (currentDeck?.languageCode) return currentDeck.languageCode;
-    if (card?.languageId) {
-      const map: Record<string, string> = {
-        chinese: 'zh-CN',
-        spanish: 'es-ES',
-        german: 'de-DE',
-        english: 'en-US',
-      };
-      if (map[card.languageId]) return map[card.languageId];
-    }
-    return 'zh-CN';
-  }, []);
-
-  const targetLangCode = getCardLanguageCode(currentCard, deck);
+  const targetLangCode = deck?.languageCode || 'en-US';
 
   const handleSpeak = useCallback((text: string, forceLang?: string) => {
-    const langToUse = forceLang || (isReverseMode ? 'en-US' : targetLangCode);
-    speak(text, langToUse);
-  }, [speak, isReverseMode, targetLangCode]);
+    speak(text, forceLang || targetLangCode);
+  }, [speak, targetLangCode]);
 
   const handleFlip = useCallback(() => {
     setIsFlipped(prev => !prev);
@@ -633,7 +617,7 @@ export const StudySession: React.FC<StudySessionProps> = ({
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/80 dark:border-zinc-700/80 active:scale-95 cursor-pointer"
                       >
                         <Volume2 className="w-3.5 h-3.5" />
-                        <span>Listen ({targetLangCode})</span>
+                        <span>朗读英文 (Listen)</span>
                       </button>
                     </div>
                   )}
@@ -693,7 +677,7 @@ export const StudySession: React.FC<StudySessionProps> = ({
               <span className="opacity-70">&bull; Swipe &larr; Review Again &bull; Swipe &rarr; I Know This</span>
             </span>
             <span className="font-mono text-[11px] uppercase">
-              {deck?.languageId}
+              English · 莱特纳
             </span>
           </div>
         </div>
