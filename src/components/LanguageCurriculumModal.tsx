@@ -21,6 +21,7 @@ import {
   Compass,
   Utensils,
   ShoppingBag,
+  MessagesSquare,
 } from 'lucide-react';
 
 interface LanguageCurriculumModalProps {
@@ -48,6 +49,7 @@ const TOPIC_ICONS: Record<string, React.ComponentType<{ className?: string }>> =
   Compass,
   Utensils,
   ShoppingBag,
+  MessagesSquare,
 };
 
 export const LanguageCurriculumModal: React.FC<LanguageCurriculumModalProps> = ({

@@ -54,12 +54,15 @@ export interface Deck {
   updatedAt: number;
 }
 
+export type CardType = 'sentence' | 'word' | 'dialogue';
+
 export interface Flashcard {
   id: string;
   deckId: string;
   profileId: string;
   languageId: LanguageId;
   difficulty: DifficultyLevel;
+  cardType?: CardType; // 'word' for words/expressions, 'sentence' for full sentences, 'dialogue' for short dialogues
   front: string; // Target English word / phrase / expression
   back: string; // Chinese translation & meaning (中文释义)
   phonetic?: string; // English IPA pronunciation (/aɪ piː eɪ/)

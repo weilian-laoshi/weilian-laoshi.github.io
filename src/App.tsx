@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import type { Profile, Deck, Flashcard, LeitnerBoxSummary, DifficultyLevel } from './types';
+import type { Profile, Deck, Flashcard, LeitnerBoxSummary, DifficultyLevel, CardType } from './types';
 import {
   getAllProfiles,
   createProfile,
@@ -21,6 +21,7 @@ import { LeitnerVisualizer } from './components/LeitnerVisualizer';
 import { DeckManager } from './components/DeckManager';
 import { StudySession } from './components/StudySession';
 import { FavoritesView } from './components/FavoritesView';
+import { CardListView } from './components/CardListView';
 import { LanguageCurriculumModal } from './components/LanguageCurriculumModal';
 import { ProfileModal } from './components/ProfileModal';
 import {
@@ -40,6 +41,7 @@ import {
   Sparkles,
   Landmark,
   Atom,
+  MessagesSquare,
 } from 'lucide-react';
 
 const TOPIC_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -52,6 +54,7 @@ const TOPIC_ICONS: Record<string, React.ComponentType<{ className?: string }>> =
   Sparkles,
   Landmark,
   Atom,
+  MessagesSquare,
 };
 
 export function App() {
@@ -63,6 +66,9 @@ export function App() {
   const [allCards, setAllCards] = useState<Flashcard[]>([]);
   const [boxSummaries, setBoxSummaries] = useState<LeitnerBoxSummary[]>([]);
   const [activeBoxFilter, setActiveBoxFilter] = useState<number | null>(null);
+
+  // Card Type filter for the 3 major features: all | word | sentence | dialogue
+  const [selectedCardTypeFilter, setSelectedCardTypeFilter] = useState<CardType | 'all'>('all');
 
   // Modals & Navigation states
   const [isStudyMode, setIsStudyMode] = useState(false);
@@ -305,6 +311,16 @@ export function App() {
   const totalFavoriteCards = allCards.filter(c => c.isFavorite).length;
   const currentDiffDef = DIFFICULTY_LEVELS.find(d => d.id === activeProfile.selectedDifficulty) || DIFFICULTY_LEVELS[0];
 
+  // Counts for the 3 main learning features
+  const wordsCount = cards.filter(c => (c.cardType || 'word') === 'word').length;
+  const sentencesCount = cards.filter(c => (c.cardType || 'word') === 'sentence').length;
+  const dialoguesCount = cards.filter(c => (c.cardType || 'word') === 'dialogue').length;
+
+  // Filtered cards based on selectedCardTypeFilter
+  const filteredCards = selectedCardTypeFilter === 'all'
+    ? cards
+    : cards.filter(c => (c.cardType || 'word') === selectedCardTypeFilter);
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col font-sans transition-colors duration-150">
       <Navbar
@@ -368,6 +384,13 @@ export function App() {
                 setSelectedDeckId(null);
                 setIsFavoritesPage(true);
               }}
+              selectedCardTypeFilter={selectedCardTypeFilter}
+              onSelectCardTypeFilter={(type) => {
+                setSelectedCardTypeFilter(type);
+              }}
+              wordsCount={wordsCount}
+              sentencesCount={sentencesCount}
+              dialoguesCount={dialoguesCount}
             />
 
             {/* If viewing a single deck */}
@@ -450,37 +473,64 @@ export function App() {
                   </div>
                 </div>
 
-                {/* Deck Cards Grid */}
-                {decks.length === 0 ? (
-                  <div className="py-16 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900">
-                    <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 mx-auto mb-3">
-                      <Layers className="w-6 h-6" />
-                    </div>
-                    <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
-                      当前暂无词库
-                    </h3>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto mb-5">
-                      打开课程设置，勾选学习主题与目标等级以生成词库。
-                    </p>
-                    <button
-                      onClick={() => setIsCurriculumModalOpen(true)}
-                      className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 cursor-pointer shadow-xs"
-                    >
-                      打开课程配置
-                    </button>
-                  </div>
+                {/* If a specific cardType filter is selected (words, sentences, dialogues), show CardListView */}
+                {selectedCardTypeFilter !== 'all' ? (
+                  <CardListView
+                    cards={filteredCards}
+                    activeType={selectedCardTypeFilter}
+                    onStudyType={async (type) => {
+                      if (!activeProfile) return;
+                      const SESSION_SIZE = 10;
+                      const due = await getDueCards(activeProfile.id, undefined, type);
+                      let queue: Flashcard[] = [];
+                      if (due.length > 0) {
+                        queue = due.slice(0, SESSION_SIZE);
+                      } else {
+                        queue = filteredCards.slice(0, SESSION_SIZE);
+                      }
+                      setStudyQueue(queue);
+                      setIsStudyMode(true);
+                    }}
+                    onToggleFavorite={async (cardId, e) => {
+                      e.stopPropagation();
+                      await toggleCardFavorite(cardId);
+                      await refreshProfileData();
+                    }}
+                    targetLangCode="en-US"
+                  />
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {decks.map(deck => (
-                      <EnglishDeckCard
-                        key={deck.id}
-                        deck={deck}
-                        onOpen={() => handleSelectDeck(deck.id)}
-                        onStudy={() => handleStartStudy(deck.id)}
-                        onDelete={() => handleDeleteDeck(deck.id)}
-                      />
-                    ))}
-                  </div>
+                  /* Deck Cards Grid for All Decks */
+                  decks.length === 0 ? (
+                    <div className="py-16 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900">
+                      <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 mx-auto mb-3">
+                        <Layers className="w-6 h-6" />
+                      </div>
+                      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
+                        当前暂无词库
+                      </h3>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto mb-5">
+                        打开课程设置，勾选学习主题与目标等级以生成词库。
+                      </p>
+                      <button
+                        onClick={() => setIsCurriculumModalOpen(true)}
+                        className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 cursor-pointer shadow-xs"
+                      >
+                        打开课程配置
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {decks.map(deck => (
+                        <EnglishDeckCard
+                          key={deck.id}
+                          deck={deck}
+                          onOpen={() => handleSelectDeck(deck.id)}
+                          onStudy={() => handleStartStudy(deck.id)}
+                          onDelete={() => handleDeleteDeck(deck.id)}
+                        />
+                      ))}
+                    </div>
+                  )
                 )}
               </div>
             )}

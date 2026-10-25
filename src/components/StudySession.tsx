@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Flashcard, Deck, SessionResult } from '../types';
 import { processCardReview } from '../db/database';
 import { FormattedContent } from './FormattedContent';
+import { DialogueCardContent } from './DialogueCardContent';
 import { useSpeech } from '../hooks/useSpeech';
 import confetti from 'canvas-confetti';
 import {
@@ -17,6 +18,8 @@ import {
   BookOpen,
   SkipForward,
   Star,
+  MessageSquare,
+  Layers,
 } from 'lucide-react';
 
 interface StudySessionProps {
@@ -456,6 +459,20 @@ export const StudySession: React.FC<StudySessionProps> = ({
               <span className="text-[11px] font-mono uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
                 {isFlipped ? 'Meaning & Usage' : 'Target Phrase'}
               </span>
+              {currentCard.cardType && (
+                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md flex items-center gap-1 ${
+                  currentCard.cardType === 'dialogue'
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                    : currentCard.cardType === 'sentence'
+                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                    : 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                }`}>
+                  {currentCard.cardType === 'dialogue' && <MessageSquare className="w-3 h-3" />}
+                  {currentCard.cardType === 'sentence' && <Layers className="w-3 h-3" />}
+                  {currentCard.cardType === 'word' && <Sparkles className="w-3 h-3" />}
+                  <span>{currentCard.cardType}</span>
+                </span>
+              )}
               {currentCard.difficulty && (
                 <span className="text-[10px] font-medium uppercase px-2 py-0.2 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
                   {currentCard.difficulty}
@@ -539,7 +556,27 @@ export const StudySession: React.FC<StudySessionProps> = ({
 
           {/* Card Body */}
           <div className="my-auto py-3 sm:py-4">
-            {!isFlipped ? (
+            {currentCard.cardType === 'dialogue' ? (
+              <div className="w-full">
+                <DialogueCardContent
+                  front={currentCard.front}
+                  back={currentCard.back}
+                  phonetic={currentCard.phonetic}
+                  targetLangCode={targetLangCode}
+                  isFlipped={isFlipped}
+                  compact={false}
+                />
+                {currentCard.grammarNotes && isFlipped && (
+                  <div className="mt-3 p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100/90 dark:border-indigo-900/50 text-[11px] sm:text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed shadow-2xs">
+                    <div className="flex items-center gap-1.5 font-semibold text-indigo-700 dark:text-indigo-400 mb-1">
+                      <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                      <span>语法重点与文化语境 (Context & Notes)</span>
+                    </div>
+                    <p className="opacity-95">{currentCard.grammarNotes}</p>
+                  </div>
+                )}
+              </div>
+            ) : !isFlipped ? (
               <div>
                 {/* Phonetic / Pinyin display */}
                 {!isReverseMode && currentCard.phonetic && (

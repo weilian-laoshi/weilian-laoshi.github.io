@@ -1,6 +1,6 @@
 import React from 'react';
-import type { LeitnerBoxSummary } from '../types';
-import { Clock, CheckCircle2, Star } from 'lucide-react';
+import type { LeitnerBoxSummary, CardType } from '../types';
+import { Clock, CheckCircle2, Star, Sparkles, Layers, MessageSquare, LayoutGrid } from 'lucide-react';
 
 interface LeitnerVisualizerProps {
   summaries: LeitnerBoxSummary[];
@@ -10,6 +10,11 @@ interface LeitnerVisualizerProps {
   totalDue: number;
   totalFavorites?: number;
   onOpenFavorites?: () => void;
+  selectedCardTypeFilter?: CardType | 'all';
+  onSelectCardTypeFilter?: (type: CardType | 'all') => void;
+  wordsCount?: number;
+  sentencesCount?: number;
+  dialoguesCount?: number;
 }
 
 export const LeitnerVisualizer: React.FC<LeitnerVisualizerProps> = ({
@@ -20,6 +25,11 @@ export const LeitnerVisualizer: React.FC<LeitnerVisualizerProps> = ({
   totalDue,
   totalFavorites = 0,
   onOpenFavorites,
+  selectedCardTypeFilter = 'all',
+  onSelectCardTypeFilter,
+  wordsCount = 0,
+  sentencesCount = 0,
+  dialoguesCount = 0,
 }) => {
   return (
     <div className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 mb-5 sm:mb-6 shadow-xs">
@@ -80,6 +90,119 @@ export const LeitnerVisualizer: React.FC<LeitnerVisualizerProps> = ({
           </div>
         </div>
       </div>
+
+      {/* 3 Major Features Selector: Words, Sentences, Dialogues */}
+      {onSelectCardTypeFilter && (
+        <div className="mb-4 pt-1">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-bold tracking-wider text-zinc-500 dark:text-zinc-400 uppercase">
+              学习分类模式 (Learning Modes)
+            </span>
+            <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
+              点击快速切换单词 / 句子 / 对话
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {/* All */}
+            <button
+              type="button"
+              onClick={() => onSelectCardTypeFilter('all')}
+              className={`flex items-center justify-between p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                selectedCardTypeFilter === 'all'
+                  ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 border-zinc-900 dark:border-white shadow-xs'
+                  : 'bg-zinc-50 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <LayoutGrid className="w-4 h-4 text-indigo-500" />
+                <span className="text-xs font-semibold">全部内容</span>
+              </div>
+              <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md ${
+                selectedCardTypeFilter === 'all'
+                  ? 'bg-white/20 dark:bg-black/15 text-white dark:text-zinc-900'
+                  : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300'
+              }`}>
+                {totalCards}
+              </span>
+            </button>
+
+            {/* Words */}
+            <button
+              type="button"
+              onClick={() => onSelectCardTypeFilter('word')}
+              className={`flex items-center justify-between p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                selectedCardTypeFilter === 'word'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                  : 'bg-zinc-50 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-400'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-blue-500" />
+                <div>
+                  <div className="text-xs font-semibold">基础单词 (Words)</div>
+                </div>
+              </div>
+              <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md ${
+                selectedCardTypeFilter === 'word'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300'
+              }`}>
+                {wordsCount}
+              </span>
+            </button>
+
+            {/* Sentences */}
+            <button
+              type="button"
+              onClick={() => onSelectCardTypeFilter('sentence')}
+              className={`flex items-center justify-between p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                selectedCardTypeFilter === 'sentence'
+                  ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                  : 'bg-zinc-50 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-amber-400'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-amber-500" />
+                <div>
+                  <div className="text-xs font-semibold">实用短句 (Sentences)</div>
+                </div>
+              </div>
+              <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md ${
+                selectedCardTypeFilter === 'sentence'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+              }`}>
+                {sentencesCount}
+              </span>
+            </button>
+
+            {/* Dialogues */}
+            <button
+              type="button"
+              onClick={() => onSelectCardTypeFilter('dialogue')}
+              className={`flex items-center justify-between p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                selectedCardTypeFilter === 'dialogue'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                  : 'bg-zinc-50 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-emerald-400'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-emerald-500" />
+                <div>
+                  <div className="text-xs font-semibold">情景对话 (Dialogues)</div>
+                </div>
+              </div>
+              <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md ${
+                selectedCardTypeFilter === 'dialogue'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
+              }`}>
+                {dialoguesCount}
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 5-Box Stepper Grid */}
       <div className="grid grid-cols-5 gap-1.5 sm:gap-2.5">

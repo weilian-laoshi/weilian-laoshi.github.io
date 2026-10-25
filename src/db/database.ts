@@ -6,6 +6,7 @@ import type {
   LeitnerBoxSummary,
   LanguageId,
   DifficultyLevel,
+  CardType,
 } from '../types';
 import {
   SUPPORTED_LANGUAGES,
@@ -87,6 +88,20 @@ export async function sanitizeEnglishDatabase(): Promise<void> {
         await db.profiles.put(p);
       }
       await seedCurriculumForProfile(p.id, p.selectedTopics, p.selectedDifficulty || 'A1');
+    }
+
+    // Ensure all existing cards have cardType assigned
+    for (const card of allCards) {
+      if (!card.cardType) {
+        if (card.front.includes('\n') && (card.front.startsWith('A:') || card.front.startsWith('A：'))) {
+          card.cardType = 'dialogue';
+        } else if (card.front.trim().includes(' ') && card.front.trim().length > 25) {
+          card.cardType = 'sentence';
+        } else {
+          card.cardType = 'word';
+        }
+        await db.cards.put(card);
+      }
     }
   } catch (err) {
     console.warn('Database sanitization notice:', err);
@@ -197,6 +212,7 @@ export async function seedCurriculumForProfile(
           profileId,
           languageId: 'english',
           difficulty: normalizeDifficulty(s.difficulty),
+          cardType: s.cardType || (s.front.includes('\n') && (s.front.startsWith('A:') || s.front.startsWith('A：')) ? 'dialogue' : s.front.trim().includes(' ') && s.front.trim().length > 25 ? 'sentence' : 'word'),
           front: s.front,
           back: s.back,
           phonetic: s.phonetic,
@@ -273,6 +289,7 @@ export async function seedCurriculumForProfile(
       profileId,
       languageId: 'english',
       difficulty: normalizeDifficulty(s.difficulty),
+      cardType: s.cardType || (s.front.includes('\n') && (s.front.startsWith('A:') || s.front.startsWith('A：')) ? 'dialogue' : s.front.trim().includes(' ') && s.front.trim().length > 25 ? 'sentence' : 'word'),
       front: s.front,
       back: s.back,
       phonetic: s.phonetic,
@@ -339,7 +356,8 @@ export async function getAllCardsForProfile(profileId: string): Promise<Flashcar
 
 export async function getDueCards(
   profileId: string,
-  deckId?: string
+  deckId?: string,
+  cardType?: CardType
 ): Promise<Flashcard[]> {
   const now = Date.now();
   const allProfileCards = await db.cards.where('profileId').equals(profileId).toArray();
@@ -347,7 +365,8 @@ export async function getDueCards(
   return allProfileCards.filter(card => {
     const matchesDeck = deckId ? card.deckId === deckId : true;
     const isDue = card.nextReviewDate <= now;
-    return matchesDeck && isDue;
+    const matchesType = cardType ? (card.cardType || 'sentence') === cardType : true;
+    return matchesDeck && isDue && matchesType;
   });
 }
 
@@ -395,7 +414,8 @@ export async function addCard(
   exampleTarget?: string,
   exampleTranslation?: string,
   grammarNotes?: string,
-  hint?: string
+  hint?: string,
+  cardType?: CardType
 ): Promise<Flashcard> {
   const newCard: Flashcard = {
     id: 'card_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
@@ -403,6 +423,7 @@ export async function addCard(
     profileId,
     languageId: 'english',
     difficulty,
+    cardType: cardType || (front.includes('\n') && (front.startsWith('A:') || front.startsWith('A：')) ? 'dialogue' : front.trim().includes(' ') && front.trim().length > 25 ? 'sentence' : 'word'),
     front: front.trim(),
     back: back.trim(),
     phonetic: phonetic?.trim() || undefined,
