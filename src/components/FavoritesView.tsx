@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Flashcard, Deck } from '../types';
 import { FormattedContent } from './FormattedContent';
 import { useSpeech } from '../hooks/useSpeech';
+import { getChinesePinyin } from '../utils/pinyin';
 import { toggleCardFavorite, resetCardProgress, deleteCard } from '../db/database';
 import { DIFFICULTY_LEVELS } from '../data/languages';
 import {
@@ -214,17 +215,43 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
                     )}
                   </div>
 
-                  <div className="text-xs text-zinc-600 dark:text-zinc-400">
+                  <div className="text-xs text-zinc-600 dark:text-zinc-400 space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono text-amber-700 dark:text-amber-400 font-medium">
+                        {getChinesePinyin(card.back)}
+                      </span>
+                      {speechSupported && (
+                        <button
+                          type="button"
+                          onClick={() => speak(card.back, 'zh-CN')}
+                          title="朗读中文发音"
+                          className="p-0.5 rounded text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-500/10 cursor-pointer"
+                        >
+                          <Volume2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
                     <FormattedContent content={card.back} />
                   </div>
 
                   {card.exampleTarget && (
-                    <div className="text-xs text-zinc-500 dark:text-zinc-400 pt-1 flex items-start gap-1.5">
-                      <BookOpen className="w-3.5 h-3.5 shrink-0 mt-0.5 text-zinc-400" />
-                      <span>
-                        <strong>例句：</strong> {card.exampleTarget}{' '}
-                        {card.exampleTranslation && <span className="italic">({card.exampleTranslation})</span>}
-                      </span>
+                    <div className="text-xs text-zinc-500 dark:text-zinc-400 pt-1 border-t border-zinc-100 dark:border-zinc-800/60 space-y-0.5">
+                      <div className="flex items-start gap-1.5">
+                        <BookOpen className="w-3.5 h-3.5 shrink-0 mt-0.5 text-zinc-400" />
+                        <div>
+                          <span><strong>例句：</strong> {card.exampleTarget}</span>
+                          {card.exampleTranslation && (
+                            <div className="mt-0.5">
+                              <span className="text-[11px] font-mono text-amber-700 dark:text-amber-400 mr-1.5">
+                                {getChinesePinyin(card.exampleTranslation)}
+                              </span>
+                              <span className="italic text-zinc-600 dark:text-zinc-400">
+                                ({card.exampleTranslation})
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Volume2 } from 'lucide-react';
 import { useSpeech } from '../hooks/useSpeech';
+import { getChinesePinyin } from '../utils/pinyin';
 
 interface DialogueCardContentProps {
   front: string;
@@ -162,11 +163,29 @@ export const DialogueCardContent: React.FC<DialogueCardContentProps> = ({
                 </p>
               )}
 
-              {/* Translation revealed on flip */}
+              {/* Translation & Pinyin revealed on flip */}
               {isFlipped && turn.translation && (
-                <p className="text-sm font-normal text-stone-600 dark:text-stone-300 pt-1 border-t border-stone-200/50 dark:border-stone-800/60 mt-1.5">
-                  {turn.translation}
-                </p>
+                <div className="pt-2 border-t border-stone-200/60 dark:border-stone-800/60 mt-2 space-y-1">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-[11px] font-mono text-amber-700 dark:text-amber-400 font-medium tracking-wide">
+                      {getChinesePinyin(turn.translation)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        speak(turn.translation!, 'zh-CN');
+                      }}
+                      title="Pronounce Chinese (中文朗读)"
+                      className="p-1 rounded text-stone-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-500/10 cursor-pointer"
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <p className="text-sm font-medium text-stone-700 dark:text-stone-200">
+                    {turn.translation}
+                  </p>
+                </div>
               )}
             </div>
           </div>

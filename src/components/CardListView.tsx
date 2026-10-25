@@ -3,6 +3,7 @@ import { Volume2, Star, Eye, EyeOff, PlayCircle, MessageSquare, Layers, Sparkles
 import type { Flashcard, CardType } from '../types';
 import { useSpeech } from '../hooks/useSpeech';
 import { DialogueCardContent } from './DialogueCardContent';
+import { getChinesePinyin } from '../utils/pinyin';
 
 interface CardListViewProps {
   cards: Flashcard[];
@@ -200,9 +201,27 @@ export const CardListView: React.FC<CardListViewProps> = ({
                         </p>
                       )}
                       {isFlipped && (
-                        <p className="text-sm text-stone-600 dark:text-stone-300 pt-2 border-t border-stone-100 dark:border-stone-800 animate-in fade-in duration-150">
-                          {card.back}
-                        </p>
+                        <div className="pt-2 border-t border-stone-100 dark:border-stone-800 animate-in fade-in duration-150 space-y-1">
+                          <div className="flex items-center justify-between gap-1.5">
+                            <span className="text-[11px] font-mono text-amber-700 dark:text-amber-400 font-medium">
+                              {getChinesePinyin(card.back)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                speak(card.back, 'zh-CN');
+                              }}
+                              title="Pronounce Chinese (朗读中文)"
+                              className="p-1 rounded text-stone-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-500/10 cursor-pointer"
+                            >
+                              <Volume2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <p className="text-sm text-stone-700 dark:text-stone-300 font-medium">
+                            {card.back}
+                          </p>
+                        </div>
                       )}
                     </div>
                   )}

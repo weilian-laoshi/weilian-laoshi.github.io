@@ -4,6 +4,7 @@ import { processCardReview } from '../db/database';
 import { FormattedContent } from './FormattedContent';
 import { DialogueCardContent } from './DialogueCardContent';
 import { useSpeech } from '../hooks/useSpeech';
+import { getChinesePinyin } from '../utils/pinyin';
 import confetti from 'canvas-confetti';
 import {
   Volume2,
@@ -624,9 +625,36 @@ export const StudySession: React.FC<StudySessionProps> = ({
             ) : (
               <div className="animate-in fade-in duration-200 space-y-3.5 sm:space-y-4">
                 <div>
-                  <span className="text-[10px] sm:text-xs text-zinc-400 uppercase tracking-wider block mb-1">
-                    Translation
-                  </span>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] sm:text-xs text-zinc-400 uppercase tracking-wider">
+                      {isReverseMode ? 'Target English' : 'Chinese Meaning & Pinyin (中文与拼音)'}
+                    </span>
+                    {!isReverseMode && speechSupported && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSpeak(currentCard.back, 'zh-CN');
+                        }}
+                        onPointerDown={e => e.stopPropagation()}
+                        title="Pronounce Chinese (朗读中文发音)"
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/20 cursor-pointer active:scale-95 transition-all"
+                      >
+                        <Volume2 className="w-3 h-3" />
+                        <span>中文发音 (Listen)</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Pinyin with tone marks for Chinese translation */}
+                  {!isReverseMode && (
+                    <div className="mb-1.5">
+                      <span className="inline-block text-xs sm:text-sm font-mono px-2 py-0.5 rounded-md bg-amber-400/15 text-amber-900 dark:text-amber-300 border border-amber-400/30 font-medium tracking-wide">
+                        {getChinesePinyin(currentCard.back)}
+                      </span>
+                    </div>
+                  )}
+
                   <FormattedContent
                     content={answerText}
                     className="text-lg sm:text-2xl font-semibold text-zinc-900 dark:text-zinc-100 leading-snug"
@@ -662,32 +690,53 @@ export const StudySession: React.FC<StudySessionProps> = ({
 
                 {/* Example sentence & translation */}
                 {currentCard.exampleTarget && (
-                  <div className="p-3 sm:p-3.5 rounded-xl bg-zinc-100/70 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/60 text-xs space-y-1">
+                  <div className="p-3 sm:p-3.5 rounded-xl bg-zinc-100/70 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/60 text-xs space-y-1.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 font-medium">
                         <BookOpen className="w-3.5 h-3.5" />
                         <span>语境例句 (In Context):</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSpeak(currentCard.exampleTarget!, targetLangCode);
-                        }}
-                        onPointerDown={e => e.stopPropagation()}
-                        title="朗读语境例句"
-                        className="p-1 rounded text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-700 cursor-pointer active:scale-95"
-                      >
-                        <Volume2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSpeak(currentCard.exampleTarget!, targetLangCode);
+                          }}
+                          onPointerDown={e => e.stopPropagation()}
+                          title="朗读英文例句"
+                          className="p-1 rounded text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-700 cursor-pointer active:scale-95"
+                        >
+                          <Volume2 className="w-3.5 h-3.5" />
+                        </button>
+                        {currentCard.exampleTranslation && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSpeak(currentCard.exampleTranslation!, 'zh-CN');
+                            }}
+                            onPointerDown={e => e.stopPropagation()}
+                            title="朗读中文例句"
+                            className="p-1 rounded text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 cursor-pointer active:scale-95"
+                          >
+                            <Volume2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <p className="text-xs sm:text-sm font-medium text-zinc-800 dark:text-zinc-200">
                       {currentCard.exampleTarget}
                     </p>
                     {currentCard.exampleTranslation && (
-                      <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 italic">
-                        "{currentCard.exampleTranslation}"
-                      </p>
+                      <div className="pt-1 border-t border-zinc-200/50 dark:border-zinc-700/50 space-y-0.5">
+                        <p className="text-[11px] font-mono text-amber-700 dark:text-amber-400">
+                          {getChinesePinyin(currentCard.exampleTranslation)}
+                        </p>
+                        <p className="text-[11px] sm:text-xs text-zinc-600 dark:text-zinc-300 font-medium">
+                          "{currentCard.exampleTranslation}"
+                        </p>
+                      </div>
                     )}
                   </div>
                 )}
