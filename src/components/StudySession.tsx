@@ -14,6 +14,7 @@ import {
   XCircle,
   Trophy,
   ArrowLeft,
+  ArrowRight,
   Sparkles,
   Repeat,
   BookOpen,
@@ -103,6 +104,16 @@ export const StudySession: React.FC<StudySessionProps> = ({
   const handleFlip = useCallback(() => {
     setIsFlipped(prev => !prev);
   }, []);
+
+  const handlePrevious = useCallback(() => {
+    if (currentIndex > 0) {
+      setCurrentIndex(prev => prev - 1);
+      setIsFlipped(false);
+      setShowHint(false);
+      setDragOffset(0);
+      setFlyDirection(null);
+    }
+  }, [currentIndex]);
 
   const handleSkip = useCallback(() => {
     if (currentIndex + 1 < cards.length) {
@@ -791,28 +802,52 @@ export const StudySession: React.FC<StudySessionProps> = ({
               <span>跳过</span>
               <kbd className="hidden sm:inline-block font-mono bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[10px]">K</kbd>
             </button>
+            {currentIndex > 0 && (
+              <button
+                type="button"
+                onClick={handlePrevious}
+                title="返回上一张卡片 (Return to Previous Card)"
+                className="py-3 sm:py-3.5 px-3 sm:px-3.5 rounded-xl text-xs sm:text-sm font-medium border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0 shadow-2xs"
+              >
+                <ArrowRight className="w-4 h-4" />
+                <span className="sr-only sm:not-sr-only sm:text-xs">上一题</span>
+              </button>
+            )}
           </div>
         ) : (
-          <div className="w-full grid grid-cols-2 gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => handleGrade(false)}
-              className="py-3 sm:py-3.5 px-3 sm:px-4 rounded-xl border border-red-200 dark:border-red-950/60 bg-red-500/10 hover:bg-red-500/15 text-red-700 dark:text-red-400 text-xs sm:text-sm font-semibold active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer"
-            >
-              <XCircle className="w-4 h-4 shrink-0" />
-              <span>还未掌握 (Review Again)</span>
-              <kbd className="hidden sm:inline-block font-mono bg-red-500/10 px-1.5 py-0.5 rounded text-[10px]">1</kbd>
-            </button>
+          <div className="w-full flex items-center gap-2 sm:gap-3">
+            <div className="flex-1 grid grid-cols-2 gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={() => handleGrade(false)}
+                className="py-3 sm:py-3.5 px-3 sm:px-4 rounded-xl border border-red-200 dark:border-red-950/60 bg-red-500/10 hover:bg-red-500/15 text-red-700 dark:text-red-400 text-xs sm:text-sm font-semibold active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer"
+              >
+                <XCircle className="w-4 h-4 shrink-0" />
+                <span>还未掌握 (Review Again)</span>
+                <kbd className="hidden sm:inline-block font-mono bg-red-500/10 px-1.5 py-0.5 rounded text-[10px]">1</kbd>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => handleGrade(true)}
-              className="py-3 sm:py-3.5 px-3 sm:px-4 rounded-xl border border-emerald-200 dark:border-emerald-950/60 bg-emerald-500/15 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm font-semibold active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer shadow-xs"
-            >
-              <CheckCircle className="w-4 h-4 shrink-0" />
-              <span>已掌握 (I Know This)</span>
-              <kbd className="hidden sm:inline-block font-mono bg-emerald-500/15 px-1.5 py-0.5 rounded text-[10px]">2</kbd>
-            </button>
+              <button
+                type="button"
+                onClick={() => handleGrade(true)}
+                className="py-3 sm:py-3.5 px-3 sm:px-4 rounded-xl border border-emerald-200 dark:border-emerald-950/60 bg-emerald-500/15 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm font-semibold active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer shadow-xs"
+              >
+                <CheckCircle className="w-4 h-4 shrink-0" />
+                <span>已掌握 (I Know This)</span>
+                <kbd className="hidden sm:inline-block font-mono bg-emerald-500/15 px-1.5 py-0.5 rounded text-[10px]">2</kbd>
+              </button>
+            </div>
+            {currentIndex > 0 && (
+              <button
+                type="button"
+                onClick={handlePrevious}
+                title="返回上一张卡片 (Return to Previous Card)"
+                className="py-3 sm:py-3.5 px-3 sm:px-3.5 rounded-xl text-xs sm:text-sm font-medium border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0 shadow-2xs"
+              >
+                <ArrowRight className="w-4 h-4" />
+                <span className="sr-only sm:not-sr-only sm:text-xs">上一题</span>
+              </button>
+            )}
           </div>
         )}
       </div>

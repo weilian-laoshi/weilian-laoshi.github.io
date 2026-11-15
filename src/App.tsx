@@ -21,6 +21,7 @@ import { LeitnerVisualizer } from './components/LeitnerVisualizer';
 import { DeckManager } from './components/DeckManager';
 import { StudySession } from './components/StudySession';
 import { FavoritesView } from './components/FavoritesView';
+import { AboutView } from './components/AboutView';
 import { CardListView } from './components/CardListView';
 import { LanguageCurriculumModal } from './components/LanguageCurriculumModal';
 import { ProfileModal } from './components/ProfileModal';
@@ -73,6 +74,7 @@ export function App() {
   // Modals & Navigation states
   const [isStudyMode, setIsStudyMode] = useState(false);
   const [isFavoritesPage, setIsFavoritesPage] = useState(false);
+  const [isAboutPage, setIsAboutPage] = useState(false);
   const [studyQueue, setStudyQueue] = useState<Flashcard[]>([]);
   const [isCurriculumModalOpen, setIsCurriculumModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -186,12 +188,14 @@ export function App() {
     setSelectedDeckId(deckId);
     setActiveBoxFilter(null);
     setIsFavoritesPage(false);
+    setIsAboutPage(false);
   };
 
   // Return to the main page
   const handleGoHome = () => {
     setIsStudyMode(false);
     setIsFavoritesPage(false);
+    setIsAboutPage(false);
     setSelectedDeckId(null);
     setActiveBoxFilter(null);
     setIsProfileModalOpen(false);
@@ -332,12 +336,19 @@ export function App() {
         onOpenCurriculumModal={() => setIsCurriculumModalOpen(true)}
         onOpenFavorites={() => {
           setSelectedDeckId(null);
+          setIsAboutPage(false);
           setIsFavoritesPage(true);
+        }}
+        onOpenAbout={() => {
+          setSelectedDeckId(null);
+          setIsFavoritesPage(false);
+          setIsAboutPage(true);
         }}
         theme={theme}
         onToggleTheme={toggleTheme}
         onGoHome={handleGoHome}
         isStudyMode={isStudyMode}
+        isAboutPage={isAboutPage}
       />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-3.5 sm:px-6 py-4 sm:py-8">
@@ -370,6 +381,8 @@ export function App() {
             onStartStudyFavorites={() => handleStudyFavorites()}
             onRefresh={refreshProfileData}
           />
+        ) : isAboutPage ? (
+          <AboutView onBack={() => setIsAboutPage(false)} />
         ) : (
           <div>
             {/* Visualizer Header */}

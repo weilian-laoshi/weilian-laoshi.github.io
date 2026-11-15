@@ -9,6 +9,7 @@ import {
   SlidersHorizontal,
   Star,
   BookOpen,
+  Info,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -19,10 +20,12 @@ interface NavbarProps {
   onOpenProfileModal: () => void;
   onOpenCurriculumModal: () => void;
   onOpenFavorites: () => void;
+  onOpenAbout: () => void;
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
   onGoHome: () => void;
   isStudyMode?: boolean;
+  isAboutPage?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -33,10 +36,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenProfileModal,
   onOpenCurriculumModal,
   onOpenFavorites,
+  onOpenAbout,
   theme,
   onToggleTheme,
   onGoHome,
   isStudyMode = false,
+  isAboutPage = false,
 }) => {
   const currentDiff = DIFFICULTY_LEVELS.find(d => d.id === activeProfile.selectedDifficulty) || DIFFICULTY_LEVELS[0];
 
@@ -114,6 +119,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">课程设置</span>
+            </button>
+          )}
+
+          {/* About Page Button */}
+          {!isStudyMode && (
+            <button
+              type="button"
+              onClick={onOpenAbout}
+              className={`h-9 px-2.5 sm:px-3 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+                isAboutPage
+                  ? 'border-indigo-500/50 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold'
+                  : 'border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/80 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+              }`}
+              title="关于威廉老师 (About Teacher)"
+            >
+              <Info className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <span>关于</span>
             </button>
           )}
 
